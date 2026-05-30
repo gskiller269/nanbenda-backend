@@ -27,6 +27,8 @@ router.get('/', async (req, res) => {
             sellingPrice: p.selling_price,
             stock: p.stock,
             branch: p.branch,
+            category: p.category,
+            specifications: p.specifications || {},
         }));
         res.json(products);
     } catch (err) {
@@ -41,13 +43,20 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
     try {
-        const { name, code, actualPrice, sellingPrice, stock, branch } = req.body;
+        const { name, code, actualPrice, sellingPrice, stock, branch, category, specifications } = req.body;
         if (!name || !code || actualPrice == null || sellingPrice == null || stock == null || !branch) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
         const { data, error } = await supabase
             .from('products')
-            .insert({ name, code, actual_price: actualPrice, selling_price: sellingPrice, stock, branch })
+            .insert({ 
+                name, code, 
+                actual_price: actualPrice, 
+                selling_price: sellingPrice, 
+                stock, branch,
+                category,
+                specifications: specifications || {}
+            })
             .select()
             .single();
         if (error) throw error;
@@ -55,6 +64,7 @@ router.post('/', async (req, res) => {
             id: data.id, name: data.name, code: data.code,
             actualPrice: data.actual_price, sellingPrice: data.selling_price,
             stock: data.stock, branch: data.branch,
+            category: data.category, specifications: data.specifications,
         });
     } catch (err) {
         console.error('[Products] POST error:', err);
@@ -64,15 +74,22 @@ router.post('/', async (req, res) => {
 
 /**
  * PUT /api/products/:id
- * Body: { name, code, actualPrice, sellingPrice, stock, branch }
+ * Body: { name, code, actualPrice, sellingPrice, stock, branch, category, specifications }
  */
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, code, actualPrice, sellingPrice, stock, branch } = req.body;
+        const { name, code, actualPrice, sellingPrice, stock, branch, category, specifications } = req.body;
         const { data, error } = await supabase
             .from('products')
-            .update({ name, code, actual_price: actualPrice, selling_price: sellingPrice, stock, branch })
+            .update({ 
+                name, code, 
+                actual_price: actualPrice, 
+                selling_price: sellingPrice, 
+                stock, branch,
+                category,
+                specifications: specifications || {}
+            })
             .eq('id', id)
             .select()
             .single();
@@ -81,6 +98,7 @@ router.put('/:id', async (req, res) => {
             id: data.id, name: data.name, code: data.code,
             actualPrice: data.actual_price, sellingPrice: data.selling_price,
             stock: data.stock, branch: data.branch,
+            category: data.category, specifications: data.specifications,
         });
     } catch (err) {
         console.error('[Products] PUT error:', err);

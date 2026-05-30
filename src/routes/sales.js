@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
             employee: s.employee_name,
             date: s.sale_date,
             paymentMode: s.payment_mode,
+            description: s.description || '',
         }));
         res.json(sales);
     } catch (err) {
@@ -55,8 +56,9 @@ router.post('/', async (req, res) => {
                 actual_price: actualPrice,
                 branch,
                 employee_name: employee,
-                sale_date: date || new Date().toISOString().split('T')[0],
+                sale_date: date || new Date().toISOString(),
                 payment_mode: paymentMode || 'Cash',
+                description: req.body.description || '',
             })
             .select()
             .single();
@@ -66,7 +68,7 @@ router.post('/', async (req, res) => {
             quantity: data.quantity, sellingPrice: data.selling_price,
             actualPrice: data.actual_price, branch: data.branch,
             employee: data.employee_name, date: data.sale_date,
-            paymentMode: data.payment_mode,
+            paymentMode: data.payment_mode, description: data.description,
         });
     } catch (err) {
         console.error('[Sales] POST error:', err);
@@ -85,6 +87,41 @@ router.delete('/:id', async (req, res) => {
     } catch (err) {
         console.error('[Sales] DELETE error:', err);
         res.status(500).json({ error: 'Failed to delete sale' });
+    }
+});
+
+/**
+ * PUT /api/sales/:id
+ * Body: { product, quantity, sellingPrice, actualPrice, paymentMode, employee }
+ */
+router.put('/:id', async (req, res) => {
+    try {
+        const { product, quantity, sellingPrice, actualPrice, paymentMode, employee } = req.body;
+        const { data, error } = await supabase
+            .from('daily_sales')
+            .update({
+                product_name: product,
+                quantity: quantity,
+                selling_price: sellingPrice,
+                actual_price: actualPrice,
+                payment_mode: paymentMode,
+                employee_name: employee,
+                description: req.body.description || ''
+            })
+            .eq('id', req.params.id)
+            .select()
+            .single();
+        if (error) throw error;
+        res.json({
+            id: data.id, product: data.product_name, code: data.product_code,
+            quantity: data.quantity, sellingPrice: data.selling_price,
+            actualPrice: data.actual_price, branch: data.branch,
+            employee: data.employee_name, date: data.sale_date,
+            paymentMode: data.payment_mode, description: data.description,
+        });
+    } catch (err) {
+        console.error('[Sales] PUT error:', err);
+        res.status(500).json({ error: 'Failed to update sale' });
     }
 });
 

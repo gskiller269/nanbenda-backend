@@ -76,22 +76,49 @@ router.post('/', async (req, res) => {
 
 /**
  * PUT /api/recharges/:id
- * Body: { status } — update status (Success/Failed/Pending)
+ * Body: { mobile, customerName, network, plan, amount, cost, status }
  */
 router.put('/:id', async (req, res) => {
     try {
-        const { status } = req.body;
+        const { mobile, customerName, network, plan, amount, cost, status } = req.body;
         const { data, error } = await supabase
             .from('recharges')
-            .update({ status })
+            .update({
+                mobile,
+                customer_name: customerName,
+                network,
+                plan,
+                amount,
+                cost,
+                status
+            })
             .eq('id', req.params.id)
             .select()
             .single();
         if (error) throw error;
-        res.json({ id: data.id, status: data.status });
+        res.json({
+            id: data.id, mobile: data.mobile, customerName: data.customer_name,
+            network: data.network, plan: data.plan, amount: data.amount,
+            cost: data.cost, branch: data.branch, employee: data.employee,
+            date: data.created_at, status: data.status,
+        });
     } catch (err) {
         console.error('[Recharges] PUT error:', err);
         res.status(500).json({ error: 'Failed to update recharge' });
+    }
+});
+
+/**
+ * DELETE /api/recharges/:id
+ */
+router.delete('/:id', async (req, res) => {
+    try {
+        const { error } = await supabase.from('recharges').delete().eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ message: 'Recharge deleted' });
+    } catch (err) {
+        console.error('[Recharges] DELETE error:', err);
+        res.status(500).json({ error: 'Failed to delete recharge' });
     }
 });
 

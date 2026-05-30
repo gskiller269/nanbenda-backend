@@ -32,32 +32,62 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * PUT /api/networks/:id  (admin only)
+ * PUT /api/networks/:id
  * Body: { balance, commissionPercent, status }
  */
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
+        const rawId = req.params.id;
+        const decodedId = decodeURIComponent(rawId);
         const { balance, commissionPercent, status } = req.body;
+
+        console.log(`[Networks] PUT request for ID/Name: "${decodedId}"`, { balance, commissionPercent });
+
         const updates = {};
         if (balance != null) updates.balance = balance;
         if (commissionPercent != null) updates.commission_percent = commissionPercent;
         if (status) updates.status = status;
 
-        const { data, error } = await supabase
-            .from('network_balances')
-            .update(updates)
-            .eq('id', req.params.id)
-            .select()
-            .single();
-        if (error) throw error;
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: 'No update data provided' });
+        }
+
+        // Handle both numeric ID and network name for identification
+        let query = supabase.from('network_balances').update(updates);
+
+        if (!isNaN(decodedId) && decodedId.trim() !== "") {
+            query = query.eq('id', decodedId);
+        } else {
+            // Case-insensitive mapping for common networks
+            const normalizedName = decodedId.trim();
+            query = query.ilike('network_name', normalizedName);
+        }
+
+        const { data, error } = await query.select(); // Get all matches first to avoid .single() error if 0 rows
+
+        if (error) {
+            console.error('[Networks] Supabase update error:', error);
+            throw error;
+        }
+
+        if (!data || data.length === 0) {
+            console.warn(`[Networks] No network found matching "${decodedId}"`);
+            return res.status(404).json({ error: `Network "${decodedId}" not found` });
+        }
+
+        const updatedRow = data[0];
+        console.log(`[Networks] Success: Updated ${updatedRow.network_name}`);
+
         res.json({
-            id: data.id, network: data.network_name,
-            commissionPercent: data.commission_percent,
-            status: data.status, balance: data.balance,
+            id: updatedRow.id,
+            network: updatedRow.network_name,
+            commissionPercent: updatedRow.commission_percent,
+            status: updatedRow.status,
+            balance: updatedRow.balance,
         });
     } catch (err) {
-        console.error('[Networks] PUT error:', err);
-        res.status(500).json({ error: 'Failed to update network' });
+        console.error('[Networks] PUT unexpected error:', err);
+        res.status(500).json({ error: 'Failed to update network balance' });
     }
 });
 

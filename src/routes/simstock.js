@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
             .order('network_name', { ascending: true });
         if (error) throw error;
         const stockMap = {};
-        data.forEach(item => { stockMap[item.network_name] = item.quantity; });
+        data.forEach(item => { stockMap[item.network_name] = item.quantity || 0; });
         res.json(stockMap);
     } catch (err) {
         console.error('[SimStock] GET error:', err);
